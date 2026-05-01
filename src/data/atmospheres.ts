@@ -1,0 +1,308 @@
+// Full Atmosphere Preset System
+// Each preset carries all the broadcast settings it configures automatically
+
+export type AtmosphereId = string;
+
+export interface AtmospherePreset {
+  id: AtmosphereId;
+  name: string;
+  category: 'worship' | 'prayer' | 'sermon' | 'communion' | 'seasonal' | 'custom';
+  description: string;
+  icon: string;
+
+  // Visual
+  gradient: string;            // Tailwind gradient classes
+  accentColor: string;         // Hex — used for lower thirds, glow, etc.
+  textColor: string;           // Hex for on-screen text
+  mediaBackground: boolean;    // Use cinematic HDR image?
+  mediaUrl?: string;           // Optional custom image URL
+  videoUrl?: string;           // Optional video ATMOS URL (mp4/webm looping)
+
+  // Broadcast defaults (auto-applied when selected)
+  layoutStyle: 'full_center' | 'lower_third' | 'modern_serif';
+  textPosition: string;
+  textStylePreset: string;
+  textFontSize: string;
+  textFontFamily: 'sans' | 'scripture';
+  showBranding: boolean;
+  activeMediaOverlays: string[];   // overlay IDs to stack automatically
+}
+
+export const atmospherePresets: AtmospherePreset[] = [
+  {
+    id: 'prayer',
+    name: 'Prayer Atmosphere',
+    category: 'prayer',
+    description: 'Quiet blue light wrap with soft bokeh and minimal lyrics.',
+    icon: 'Moon',
+    gradient: 'from-sky-950 via-blue-900 to-indigo-950',
+    accentColor: '#6EC9FF',
+    textColor: '#F5F7FA',
+    mediaBackground: false,
+    layoutStyle: 'modern_serif',
+    textPosition: 'center',
+    textStylePreset: 'luma_white',
+    textFontSize: 'lg',
+    textFontFamily: 'scripture',
+    showBranding: false,
+    activeMediaOverlays: ['soft_bokeh'],
+  },
+  {
+    id: 'deep_worship',
+    name: 'Deep Worship',
+    category: 'worship',
+    description: 'Immersive dark atmosphere with golden particles for high-intensity worship.',
+    icon: 'Flame',
+    gradient: 'from-slate-950 via-indigo-950 to-purple-950',
+    accentColor: '#E8C77A',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'halo_gold',
+    textFontSize: 'lg',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['golden_dust'],
+  },
+  {
+    id: 'revival',
+    name: 'Revival Night',
+    category: 'worship',
+    description: 'Warmer stage energy with dynamic light rays and high contrast.',
+    icon: 'Zap',
+    gradient: 'from-orange-950 via-rose-900 to-fuchsia-950',
+    accentColor: '#FF6B6B',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'clean_white',
+    textFontSize: 'xl',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['light_rays', 'noise_grain'],
+  },
+  {
+    id: 'scripture_glow',
+    name: 'Scripture Glow',
+    category: 'sermon',
+    description: 'Elegant reading mode designed for immersive scripture projection.',
+    icon: 'BookOpen',
+    gradient: 'from-violet-950 via-indigo-950 to-sky-950',
+    accentColor: '#E8C77A',
+    textColor: '#F5F7FA',
+    mediaBackground: false,
+    layoutStyle: 'modern_serif',
+    textPosition: 'center',
+    textStylePreset: 'halo_gold',
+    textFontSize: 'md',
+    textFontFamily: 'scripture',
+    showBranding: false,
+    activeMediaOverlays: ['soft_bokeh'],
+  },
+  {
+    id: 'communion',
+    name: 'Communion Light',
+    category: 'communion',
+    description: 'Soft gold and blue wash for reflective, intimate service moments.',
+    icon: 'Bird',
+    gradient: 'from-amber-950 via-yellow-900 to-slate-950',
+    accentColor: '#E8C77A',
+    textColor: '#F5F7FA',
+    mediaBackground: false,
+    layoutStyle: 'lower_third',
+    textPosition: 'bot-center',
+    textStylePreset: 'luma_white',
+    textFontSize: 'sm',
+    textFontFamily: 'scripture',
+    showBranding: false,
+    activeMediaOverlays: ['doves'],
+  },
+  {
+    id: 'cinematic',
+    name: 'Cinematic Stage',
+    category: 'worship',
+    description: 'HDR media background with cinematic lower-thirds. Broadcast-ready.',
+    icon: 'Film',
+    gradient: 'from-slate-950 to-black',
+    accentColor: '#6EC9FF',
+    textColor: '#FFFFFF',
+    mediaBackground: true,
+    layoutStyle: 'lower_third',
+    textPosition: 'bot-left',
+    textStylePreset: 'atmos_glow',
+    textFontSize: 'lg',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['noise_grain'],
+  },
+  {
+    id: 'christmas',
+    name: 'Christmas Service',
+    category: 'seasonal',
+    description: 'Warm festive atmosphere with snow overlay and candlelight tones.',
+    icon: 'Snowflake',
+    gradient: 'from-blue-950 via-indigo-900 to-slate-950',
+    accentColor: '#E8C77A',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'halo_gold',
+    textFontSize: 'lg',
+    textFontFamily: 'scripture',
+    showBranding: false,
+    activeMediaOverlays: ['christmas'],
+  },
+  {
+    id: 'easter',
+    name: 'Easter Celebration',
+    category: 'seasonal',
+    description: 'Bright spring energy with ascending light and vibrant colors.',
+    icon: 'Flower',
+    gradient: 'from-emerald-950 via-teal-900 to-sky-950',
+    accentColor: '#6EC9FF',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'atmos_glow',
+    textFontSize: 'lg',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['easter', 'doves'],
+  },
+  {
+    id: 'urban_worship',
+    name: 'Urban Worship',
+    category: 'worship',
+    description: 'Contemporary city-church energy with neon cyan accents.',
+    icon: 'Building2',
+    gradient: 'from-cyan-950 via-slate-950 to-indigo-950',
+    accentColor: '#00D4FF',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'atmos_glow',
+    textFontSize: 'lg',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['light_rays'],
+    videoUrl: 'https://cdn.pixabay.com/video/2016/09/10/5252-182948262_large.mp4',
+  },
+  {
+    id: 'gospel_fire',
+    name: 'Gospel Fire',
+    category: 'worship',
+    description: 'Full-gospel energy with deep reds and gold. High praise.',
+    icon: 'Music',
+    gradient: 'from-red-950 via-orange-900 to-amber-950',
+    accentColor: '#FFB347',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'halo_gold',
+    textFontSize: 'xl',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['golden_dust', 'light_rays'],
+    videoUrl: 'https://cdn.pixabay.com/video/2016/12/26/6961-197634410_large.mp4',
+  },
+  {
+    id: 'baptism',
+    name: 'Baptism Ceremony',
+    category: 'communion',
+    description: 'Deep blue water tones. Clean and reverent.',
+    icon: 'Droplets',
+    gradient: 'from-blue-950 via-cyan-950 to-teal-950',
+    accentColor: '#38BDF8',
+    textColor: '#E0F2FE',
+    mediaBackground: false,
+    layoutStyle: 'lower_third',
+    textPosition: 'bot-center',
+    textStylePreset: 'atmos_glow',
+    textFontSize: 'md',
+    textFontFamily: 'scripture',
+    showBranding: false,
+    activeMediaOverlays: ['soft_bokeh'],
+    videoUrl: 'https://cdn.pixabay.com/video/2019/01/30/20918-314575948_large.mp4',
+  },
+  {
+    id: 'pentecost',
+    name: 'Pentecost Sunday',
+    category: 'seasonal',
+    description: 'Fire and wind. Red and gold tones for Pentecost Sunday.',
+    icon: 'Flame',
+    gradient: 'from-red-950 via-rose-900 to-orange-950',
+    accentColor: '#FF4500',
+    textColor: '#FFFFFF',
+    mediaBackground: false,
+    layoutStyle: 'full_center',
+    textPosition: 'center',
+    textStylePreset: 'halo_gold',
+    textFontSize: 'lg',
+    textFontFamily: 'sans',
+    showBranding: true,
+    activeMediaOverlays: ['light_rays', 'golden_dust'],
+    videoUrl: 'https://cdn.pixabay.com/video/2023/03/21/155076-810025800_large.mp4',
+  },
+];
+
+// Keep backward compat for old consumers that just need names
+export const atmospheres = atmospherePresets.map(a => a.name);
+
+// ── Free cinematic video loops for ATMOS backgrounds ──────────────────────────
+// All from Pixabay (free CC0 license). More can be added via custom URL.
+export const VIDEO_ATMOS_PRESETS: { id: string; label: string; url: string; thumbnail: string }[] = [
+  {
+    id: 'fog_forest',
+    label: 'Misty Forest',
+    url: 'https://cdn.pixabay.com/video/2016/09/10/5252-182948262_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2023/01/11/23/06/mountains-7711704_1280.jpg',
+  },
+  {
+    id: 'starfield',
+    label: 'Starfield Loop',
+    url: 'https://cdn.pixabay.com/video/2016/12/26/6961-197634410_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2016/12/26/17/28/christmas-1931949_1280.jpg',
+  },
+  {
+    id: 'ocean_waves',
+    label: 'Ocean Waves',
+    url: 'https://cdn.pixabay.com/video/2019/01/30/20918-314575948_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2016/05/03/19/22/ocean-1369258_1280.jpg',
+  },
+  {
+    id: 'fire_sparks',
+    label: 'Fire & Embers',
+    url: 'https://cdn.pixabay.com/video/2023/03/21/155076-810025800_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2016/10/28/11/00/fire-1777382_1280.jpg',
+  },
+  {
+    id: 'heaven_light',
+    label: 'Heavenly Light',
+    url: 'https://cdn.pixabay.com/video/2020/07/08/44878-437498600_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2020/07/26/05/57/sky-5438379_1280.jpg',
+  },
+  {
+    id: 'rain_window',
+    label: 'Rain on Glass',
+    url: 'https://cdn.pixabay.com/video/2015/11/06/984-145095552_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2015/07/05/10/18/rain-831668_1280.jpg',
+  },
+  {
+    id: 'particles_gold',
+    label: 'Gold Particles',
+    url: 'https://cdn.pixabay.com/video/2016/06/30/3802-172613903_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2016/06/30/06/29/particles-1488780_1280.jpg',
+  },
+  {
+    id: 'clouds_sunrise',
+    label: 'Sunrise Clouds',
+    url: 'https://cdn.pixabay.com/video/2022/01/03/103137-663085547_large.mp4',
+    thumbnail: 'https://cdn.pixabay.com/photo/2022/01/08/07/04/sunrise-6923614_1280.jpg',
+  },
+];

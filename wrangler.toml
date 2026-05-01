@@ -1,0 +1,13 @@
+name = "sanctuaryos"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+main = ".open-next/worker.js"
+assets = { directory = ".open-next/assets", binding = "ASSETS" }
+
+[vars]
+NEXT_PUBLIC_APP_NAME = "SanctuaryOS"
+
+# Cloudflare KV — persists signal messages across all edge nodes
+[[kv_namespaces]]
+binding = "SIGNAL_STORE"
+id = "eae551871a8f414a8be81db349f5f292"
