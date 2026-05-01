@@ -101,7 +101,7 @@ export function SonusProWorkspace({
   autoMix, setAutoMix, autoDuck, setAutoDuck, compGainReduction,
   setChannelVolume, toggleChannelMute, toggleChannelSolo,
   setChannelSend, setPreAmpGain, setChannelEQ, setHPFFreq, toggleGate, toggleComp,
-  setBusMasterLevel, toggleBusMute, applyChannelPreset, onClose
+  setBusMasterLevel, toggleBusMute, applyChannelPreset, addVirtualChannel, onClose
 }: SonusProWorkspaceProps) {
   
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
