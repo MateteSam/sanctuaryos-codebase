@@ -95,15 +95,17 @@ export interface SonusProWorkspaceProps {
   toggleBusMute: (id: string) => void;
   applyChannelPreset: (id: string, presetId: AudioPresetId) => void;
   addVirtualChannel: (label: string, url: string) => void;
+  getFohAnalyser: () => AnalyserNode | null;
   onClose: () => void;
 }
 
 export function SonusProWorkspace({
   channels, channelLevels, clipping, peakHold, buses, busLevels,
   autoMix, setAutoMix, autoDuck, setAutoDuck, compGainReduction,
+  audioContextState, broadcastStream,
   setChannelVolume, toggleChannelMute, toggleChannelSolo,
   setChannelSend, setPreAmpGain, setChannelEQ, setHPFFreq, toggleGate, toggleComp,
-  setBusMasterLevel, toggleBusMute, applyChannelPreset, addVirtualChannel, onClose
+  setBusMasterLevel, toggleBusMute, applyChannelPreset, addVirtualChannel, getFohAnalyser, onClose
 }: SonusProWorkspaceProps) {
   
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
@@ -118,7 +120,59 @@ export function SonusProWorkspace({
   
   const selectedChannel = channels.find(c => c.id === selectedChannelId);
   const fohBus = buses.find(b => b.id === 'foh');
-  
+
+  // AI EQ Matcher Loop
+  useEffect(() => {
+    if (!refProfile) return;
+    
+    let rafId: number;
+    let frameCount = 0;
+
+    const loop = () => {
+      frameCount++;
+      
+      // We only compute this 5 times a second to prevent overloading CPU & MIDI traffic
+      if (frameCount % 12 === 0) {
+        const analyser = getFohAnalyser();
+        if (analyser && audioContextState === 'running') {
+          // 1. Grab Live FOH Spectrum
+          const liveProfile = eqMatcher.current.analyzeLiveStream(analyser, analyser.context.sampleRate);
+          
+          // 2. Compute the Corrective EQ Needed to match Reference Profile
+          const corrections = eqMatcher.current.calculateCorrectiveEQ(liveProfile, refProfile);
+          
+          // 3. Apply to software Engine
+          // For now, we apply this master correction curve across all active virtual channels
+          channels.forEach(ch => {
+            if (!ch.muted) {
+              setChannelEQ(ch.id, {
+                low: ch.eq.low + (corrections.low * 0.1),       // Soft smoothing factor
+                lowMid: ch.eq.lowMid + (corrections.lowMid * 0.1),
+                highMid: ch.eq.highMid + (corrections.highMid * 0.1),
+                high: ch.eq.high + (corrections.high * 0.1),
+              });
+            }
+          });
+
+          // 4. If Qu-16 is linked, send hardware overrides to the Master LR EQ
+          if (qu16.state.status === 'connected') {
+            const clampScale = (db: number) => Math.max(0, Math.min(1, (db + 15) / 30)); // -15 to +15 mapped to 0-1
+            // In a real scenario, QU_CHANNELS.LR_MASTER and QU_PARAMS.EQ_LOW_GAIN would be used.
+            // Using 0x20 for LR Master. Note: Param IDs for PEQ need to match Qu-16 exactly.
+            qu16.setEQ(0x20, 0x1B, clampScale(corrections.low)); // EQ_LOW_GAIN = 0x1B
+            qu16.setEQ(0x20, 0x1F, clampScale(corrections.lowMid)); // EQ_LM_GAIN = 0x1F
+            qu16.setEQ(0x20, 0x23, clampScale(corrections.highMid)); // EQ_HM_GAIN = 0x23
+            qu16.setEQ(0x20, 0x27, clampScale(corrections.high)); // EQ_HIGH_GAIN = 0x27
+          }
+        }
+      }
+      rafId = requestAnimationFrame(loop);
+    };
+
+    rafId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(rafId);
+  }, [refProfile, channels, qu16, getFohAnalyser, audioContextState]);
+
   const handleAiCommand = () => {
     if (!aiChat.trim()) return;
     const cmd = aiChat.toLowerCase();

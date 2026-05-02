@@ -570,5 +570,6 @@ export function useAudioEngine(cameras: ManagedCamera[]) {
     togglePastorMic: (id: string) => setChannels(prev => prev.map(c => c.id === id ? { ...c, isPastorMic: !c.isPastorMic } : c)),
     setAuxSend: (id: string, aux: 1 | 2, v: number) => setChannelSend(id, aux === 1 ? 'mon-1' : 'mon-2', v),
     applyChannelPreset, addVirtualChannel,
+    getFohAnalyser: useCallback(() => busNodesRef.current.get('foh')?.analyser || null, []),
   };
 }

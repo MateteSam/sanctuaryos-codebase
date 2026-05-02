@@ -51,7 +51,7 @@ export function BroadcastShell({
     setPreAmpGain, setChannelEQ, setHPFFreq, toggleGate, toggleComp,
     setChannelSend, setBusMasterLevel, toggleBusMute,
     dominantChannelId, togglePastorMic, setAuxSend,
-    applyChannelPreset, addVirtualChannel } = useAudioEngine(cameras);
+    applyChannelPreset, addVirtualChannel, getFohAnalyser } = useAudioEngine(cameras);
 
   const [programCamId, setProgramCamId] = useState<string | null>(null);
   const [previewCamId, setPreviewCamId]  = useState<string | null>(null);
@@ -326,6 +326,7 @@ export function BroadcastShell({
               toggleBusMute={toggleBusMute}
               applyChannelPreset={applyChannelPreset}
               addVirtualChannel={addVirtualChannel}
+              getFohAnalyser={getFohAnalyser}
               onClose={() => setShowAudioWorkspace(false)}
             />
           </motion.div>

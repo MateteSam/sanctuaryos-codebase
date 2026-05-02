@@ -120,10 +120,22 @@ export function useQu16Sync(midiChannel: number = 0) {
     outputRef.current.send(payload);
   }, [midiChannel]);
 
+  const setEQ = useCallback((quChannelMsb: number, paramLsb: number, floatValue: number) => {
+    if (!outputRef.current) return;
+    
+    setState(s => ({ ...s, txActive: true }));
+    clearTimeout(txTimer.current);
+    txTimer.current = setTimeout(() => setState(s => ({ ...s, txActive: false })), 100);
+
+    const payload = buildQu16Nrpn(midiChannel, quChannelMsb, paramLsb, floatValue);
+    outputRef.current.send(payload);
+  }, [midiChannel]);
+
   return {
     state,
     lastMessage,
     setFader,
-    setMute
+    setMute,
+    setEQ
   };
 }

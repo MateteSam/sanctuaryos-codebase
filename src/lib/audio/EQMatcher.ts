@@ -72,6 +72,48 @@ export class EQMatcher {
   }
 
   /**
+   * Analyzes an active WebAudio AnalyserNode and returns the current spectral envelope.
+   * Can be called inside a requestAnimationFrame loop for real-time tracking.
+   */
+  public analyzeLiveStream(analyzer: AnalyserNode, sampleRate: number): SpectralProfile {
+    const bufferLength = analyzer.frequencyBinCount;
+    const dataArray = new Float32Array(bufferLength);
+    analyzer.getFloatFrequencyData(dataArray);
+
+    const nyquist = sampleRate / 2;
+    const hzPerBin = nyquist / bufferLength;
+
+    let lowSum = 0, lowCount = 0;
+    let lmSum = 0, lmCount = 0;
+    let hmSum = 0, hmCount = 0;
+    let hiSum = 0, hiCount = 0;
+
+    for (let i = 0; i < bufferLength; i++) {
+      const hz = i * hzPerBin;
+      const db = dataArray[i];
+      if (db === -Infinity || db < -120) continue; // Skip absolute silence/noise floor
+
+      if (hz < 250) {
+        lowSum += db; lowCount++;
+      } else if (hz < 1000) {
+        lmSum += db; lmCount++;
+      } else if (hz < 4000) {
+        hmSum += db; hmCount++;
+      } else {
+        hiSum += db; hiCount++;
+      }
+    }
+
+    // Default to -100dB if no signal
+    return {
+      low: lowCount > 0 ? lowSum / lowCount : -100,
+      lowMid: lmCount > 0 ? lmSum / lmCount : -100,
+      highMid: hmCount > 0 ? hmSum / hmCount : -100,
+      high: hiCount > 0 ? hiSum / hiCount : -100,
+    };
+  }
+
+  /**
    * Compares the live FFT spectrum of a channel against the Reference Profile
    * and calculates corrective EQ gains (-12dB to +12dB) to apply to the Qu-16.
    */

@@ -27,7 +27,7 @@ export function AudioStation() {
     setPreAmpGain, setChannelEQ, setHPFFreq, toggleGate, toggleComp,
     setChannelSend, setBusMasterLevel, toggleBusMute,
     dominantChannelId, togglePastorMic, setAuxSend,
-    applyChannelPreset, addVirtualChannel,
+    applyChannelPreset, addVirtualChannel, getFohAnalyser
   } = useAudioEngine(cameras);
 
   // Track whether the user has minimized the workspace header
@@ -63,6 +63,7 @@ export function AudioStation() {
           toggleBusMute={toggleBusMute}
           applyChannelPreset={applyChannelPreset}
           addVirtualChannel={addVirtualChannel}
+          getFohAnalyser={getFohAnalyser}
           onClose={() => {/* No-op in station mode — always visible */}}
         />
       </div>
