@@ -115,16 +115,22 @@ export function useCameraManager() {
   const removeGenesisRef = useRef(removeGenesis);
   useEffect(() => { removeGenesisRef.current = removeGenesis; }, [removeGenesis]);
 
-  // ── Fetch stable host peer ID from server ───────────────────────────────────
+  // ── Stable host peer ID generation ──────────────────────────────────────────
   useEffect(() => {
-    fetch('/api/peer-id')
-      .then(r => r.json())
-      .then((data: any) => {
-        console.log('[CameraManager] ✅ Host ID received:', data.hostId);
-        setHostId(data.hostId);
-      })
-      .catch(err => console.error('[CameraManager] ❌ Failed to get host ID:', err));
-
+    try {
+      let id = localStorage.getItem('sanctuary_host_id');
+      if (!id) {
+        id = `sanctuary-host-${Math.random().toString(36).slice(2, 10)}`;
+        localStorage.setItem('sanctuary_host_id', id);
+      }
+      console.log('[CameraManager] ✅ Host ID generated/loaded:', id);
+      setHostId(id);
+    } catch {
+      // Fallback for private browsing
+      const fallbackId = `sanctuary-host-${Math.random().toString(36).slice(2, 10)}`;
+      console.log('[CameraManager] ✅ Host ID generated (memory):', fallbackId);
+      setHostId(fallbackId);
+    }
   }, []);
 
   // ── Enumerate & open local camera(s) ───────────────────────────────────────
