@@ -149,6 +149,10 @@ export class GenesisEngine {
 
     // 4. Capture the processed output at broadcast quality
     this.processedStream = this.canvas.captureStream(60);
+    // Persist audio tracks from the original camera/RTC stream
+    this.rawStream.getAudioTracks().forEach(track => {
+      this.processedStream.addTrack(track);
+    });
 
     // 5. Start rendering once video is decoded
     this.video.onplaying = () => {

@@ -150,7 +150,7 @@ export function useCameraManager() {
         try {
           firstStream = await navigator.mediaDevices.getUserMedia({
             video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false,
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
           });
           setPermissionState('granted');
           // Re-enumerate now that we have permission (labels are now visible)
@@ -247,7 +247,7 @@ export function useCameraManager() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: false,
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
       });
       const track = stream.getVideoTracks()[0];
       const s = track.getSettings();
