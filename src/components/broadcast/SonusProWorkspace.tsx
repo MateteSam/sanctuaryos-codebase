@@ -7,6 +7,8 @@ import type { AudioChannel, AudioBus, ChannelEQ, AudioPresetId } from '@/lib/use
 import { DAWFader, PanKnob, VUBars, MSButton, CHAN_COLORS } from './daw-ui';
 import { RotaryKnob, CompMeter } from './daw-knobs';
 import { SONUS_PRESETS, PRESET_CATEGORIES } from '@/lib/audioPresets';
+import { useQu16Sync } from '@/lib/midi/useQu16Sync';
+import { EQMatcher, SpectralProfile } from '@/lib/audio/EQMatcher';
 
 // ============================================================================
 // SVG EQ Curve Visualization
@@ -107,6 +109,12 @@ export function SonusProWorkspace({
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [activeScene, setActiveScene] = useState<string>('SOUNDCHECK');
   const [aiChat, setAiChat] = useState('');
+  const [showEqMatcher, setShowEqMatcher] = useState(false);
+  const [refProfile, setRefProfile] = useState<SpectralProfile | null>(null);
+  
+  // Qu-16 Hardware Link
+  const qu16 = useQu16Sync(0);
+  const eqMatcher = useRef(new EQMatcher());
   
   const selectedChannel = channels.find(c => c.id === selectedChannelId);
   const fohBus = buses.find(b => b.id === 'foh');
@@ -157,6 +165,23 @@ export function SonusProWorkspace({
              <button onClick={() => setAutoDuck(!autoDuck)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${autoDuck ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.3)]' : 'bg-white/5 border-white/10 text-slate-500'}`}>
                AI DUCK
              </button>
+             <button onClick={() => setShowEqMatcher(!showEqMatcher)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${showEqMatcher ? 'bg-pink-500/20 border-pink-500/50 text-pink-300 shadow-[0_0_15px_rgba(236,72,153,0.3)]' : 'bg-white/5 border-white/10 text-slate-500'}`}>
+               AI MATCH
+             </button>
+          </div>
+          
+          <div className="h-6 w-px bg-white/10" />
+
+          {/* Qu-16 Hardware Bridge */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-white/[0.05]">
+            <div className={`w-2 h-2 rounded-full ${qu16.state.status === 'connected' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : qu16.state.status === 'connecting' ? 'bg-amber-500 animate-pulse' : 'bg-red-500'}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">Qu-16 LINK</span>
+            {qu16.state.status === 'connected' && (
+              <div className="flex gap-1 ml-2">
+                <span className={`text-[7px] font-bold ${qu16.state.rxActive ? 'text-emerald-400' : 'text-slate-600'}`}>RX</span>
+                <span className={`text-[7px] font-bold ${qu16.state.txActive ? 'text-sky-400' : 'text-slate-600'}`}>TX</span>
+              </div>
+            )}
           </div>
           
           <div className="h-6 w-px bg-white/10" />
@@ -177,8 +202,43 @@ export function SonusProWorkspace({
       </div>
 
       {/* ── WORKSPACE AREA ── */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex overflow-hidden min-h-0 relative">
         
+        {/* EQ Matcher Overlay */}
+        <AnimatePresence>
+          {showEqMatcher && (
+            <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="absolute top-4 left-1/2 -translate-x-1/2 w-[600px] bg-[#121214]/95 backdrop-blur-xl border border-pink-500/20 shadow-2xl rounded-2xl z-50 p-6 flex flex-col items-center">
+              <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center mb-4">
+                <Wand2 className="w-6 h-6 text-pink-400" />
+              </div>
+              <h3 className="text-lg font-black tracking-widest text-white uppercase mb-2">AI Mix Profiler</h3>
+              <p className="text-xs text-slate-400 text-center mb-6 max-w-sm">Drop a reference track (WAV/MP3) below. Sonus will analyze its spectral fingerprint and calculate corrective EQ matching curves for the Qu-16.</p>
+              
+              <label className="w-full h-32 border-2 border-dashed border-white/10 hover:border-pink-500/50 bg-black/20 hover:bg-pink-500/5 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all">
+                <input type="file" accept="audio/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const arrayBuffer = await file.arrayBuffer();
+                  const profile = await eqMatcher.current.analyzeReferenceTrack(arrayBuffer);
+                  setRefProfile(profile);
+                }} />
+                {refProfile ? (
+                  <div className="text-center">
+                    <span className="text-emerald-400 font-black text-sm uppercase tracking-widest mb-1 block">Profile Extracted</span>
+                    <span className="text-xs text-slate-500 font-mono">Live channels will now morph to match this signature.</span>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <span className="text-white font-black text-sm uppercase tracking-widest mb-1 block">Drop Reference Track</span>
+                    <span className="text-xs text-slate-500 font-mono">Or click to browse</span>
+                  </div>
+                )}
+              </label>
+              <button onClick={() => setShowEqMatcher(false)} className="mt-6 px-6 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-black tracking-widest uppercase text-white transition-all">Close</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* LEFT: MIXER SURFACE */}
         <div className="flex-1 overflow-x-auto flex bg-[#0e0e11]">
           {/* Channel Strips */}
