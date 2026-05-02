@@ -188,7 +188,21 @@ export function useAudioEngine(cameras: ManagedCamera[]) {
     setAudioContextState(ctx.state);
     const onState = () => setAudioContextState(ctx.state);
     ctx.addEventListener('statechange', onState);
-    return () => ctx.removeEventListener('statechange', onState);
+
+    // Auto-resume AudioContext on first user interaction to fix autoplay policy issues
+    const resumeAudio = () => {
+      if (ctx.state === 'suspended') ctx.resume();
+    };
+    window.addEventListener('click', resumeAudio, { once: true });
+    window.addEventListener('touchstart', resumeAudio, { once: true });
+    window.addEventListener('keydown', resumeAudio, { once: true });
+
+    return () => {
+      ctx.removeEventListener('statechange', onState);
+      window.removeEventListener('click', resumeAudio);
+      window.removeEventListener('touchstart', resumeAudio);
+      window.removeEventListener('keydown', resumeAudio);
+    };
   }, []);
 
   // ── Sync cameras & virtual sources → channels ───────────────────────────

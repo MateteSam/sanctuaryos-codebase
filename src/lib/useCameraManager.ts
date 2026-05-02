@@ -148,10 +148,18 @@ export function useCameraManager() {
       // We always need to request a stream if: labels are hidden OR we have no active streams
       if (labelsHidden || !hasActiveStream) {
         try {
-          firstStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-          });
+          try {
+            firstStream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+            });
+          } catch (err: any) {
+            console.warn('[CameraManager] Failed to get video+audio, trying video only...', err.message);
+            firstStream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1920 }, height: { ideal: 1080 } },
+              audio: false,
+            });
+          }
           setPermissionState('granted');
           // Re-enumerate now that we have permission (labels are now visible)
           devices = await navigator.mediaDevices.enumerateDevices();
@@ -245,10 +253,19 @@ export function useCameraManager() {
     ));
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
-      });
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+        });
+      } catch (err: any) {
+        console.warn('[CameraManager] Failed to get video+audio for specific device, trying video only...', err.message);
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+          audio: false,
+        });
+      }
       const track = stream.getVideoTracks()[0];
       const s = track.getSettings();
       const resolution = s.width && s.height ? `${s.width}x${s.height}` : undefined;
