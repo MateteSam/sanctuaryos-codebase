@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
+export const dynamic = 'force-dynamic';
+
 // Lazy-init fallback for local dev — NO top-level side effects
 let _localHostId: string | undefined;
 

@@ -19,6 +19,8 @@
 
 import { subscribe } from '@/lib/sseState';
 
+export const dynamic = 'force-dynamic';
+
 // ── SSE handler ────────────────────────────────────────────────────────────────
 export async function GET() {
   const encoder = new TextEncoder();

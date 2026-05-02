@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 import { broadcastStateUpdate } from '@/lib/sseState';
 
+export const dynamic = 'force-dynamic';
+
 // ── State shape ────────────────────────────────────────────────────────────────
 const DEFAULT_STATE = {
   room: 'Main Auditorium',
