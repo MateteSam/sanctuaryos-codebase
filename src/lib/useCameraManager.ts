@@ -139,13 +139,14 @@ export function useCameraManager() {
 
     setIsLoadingDevices(true);
     try {
-      const currentLocalCams = camerasRef.current.filter(c => c.type === 'local' || c.type === 'usb');
+      const currentLocalCams = camerasRef.current.filter(c => c.type === 'local' || c.type === 'usb' || c.type === 'usb-audio');
       const hasActiveStream = currentLocalCams.some(c => c.connected && c.stream &&
         c.stream.getTracks().some(t => t.readyState === 'live'));
 
       let devices = await navigator.mediaDevices.enumerateDevices();
       let videoDevices = devices.filter(d => d.kind === 'videoinput');
-      const labelsHidden = videoDevices.some(d => d.label === '');
+      let audioDevices = devices.filter(d => d.kind === 'audioinput');
+      const labelsHidden = videoDevices.some(d => d.label === '') || audioDevices.some(d => d.label === '');
 
       let firstStream: MediaStream | null = null;
       let processedFirstStream: MediaStream | null = null;
@@ -170,6 +171,7 @@ export function useCameraManager() {
           // Re-enumerate now that we have permission (labels are now visible)
           devices = await navigator.mediaDevices.enumerateDevices();
           videoDevices = devices.filter(d => d.kind === 'videoinput');
+          audioDevices = devices.filter(d => d.kind === 'audioinput');
           firstCamId = videoDevices.length > 0 ? `local-${videoDevices[0].deviceId}` : 'local-default';
           processedFirstStream = applyGenesisRef.current(firstCamId, firstStream);
         } catch (err: any) {
@@ -223,9 +225,35 @@ export function useCameraManager() {
         };
       });
 
+      // Find standalone audio interfaces (exclude default mics that belong to webcams)
+      const standaloneAudio = audioDevices.filter(ad => 
+        ad.deviceId !== 'default' && 
+        ad.deviceId !== 'communications' &&
+        !videoDevices.some(vd => vd.groupId === ad.groupId) // not part of a webcam
+      ).map((dev, idx) => {
+        const id = `audio-${dev.deviceId}`;
+        const existing = currentLocalCams.find(c => c.id === id);
+
+        if (existing && existing.stream && existing.connected &&
+            existing.stream.getTracks().some(t => t.readyState === 'live')) {
+          return { ...existing, label: dev.label || existing.label };
+        }
+
+        return {
+          id,
+          name: `Qu-Drive ${idx + 1}`,
+          label: dev.label || `USB Interface ${idx + 1}`,
+          color: 'from-purple-900 to-slate-900',
+          status: 'standby' as const,
+          type: 'usb-audio' as any,
+          deviceId: dev.deviceId,
+          connected: false,
+        };
+      });
+
       setCameras(prev => {
         const rtcSources = prev.filter(c => c.type === 'rtc');
-        return [...localCams, ...rtcSources];
+        return [...localCams, ...standaloneAudio, ...rtcSources];
       });
     } catch (err: any) {
       if (err.name === 'NotAllowedError') setPermissionState('denied');
@@ -260,22 +288,36 @@ export function useCameraManager() {
 
     try {
       let stream: MediaStream;
-      try {
+      if (cam.type === 'usb-audio') {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+          video: false,
+          audio: { 
+            deviceId: { exact: deviceId },
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            // Ask for up to 32 channels if the browser supports it (Web Audio standard)
+            channelCount: { ideal: 32 }
+          },
         });
-      } catch (err: any) {
-        console.warn('[CameraManager] Failed to get video+audio for specific device, trying video only...', err.message);
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        });
+      } else {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: false },
+          });
+        } catch (err: any) {
+          console.warn('[CameraManager] Failed to get video+audio for specific device, trying video only...', err.message);
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+            audio: false,
+          });
+        }
       }
       const track = stream.getVideoTracks()[0];
-      const s = track.getSettings();
-      const resolution = s.width && s.height ? `${s.width}x${s.height}` : undefined;
-      const processedStream = applyGenesisRef.current(cameraId, stream);
+      const s = track?.getSettings();
+      const resolution = s?.width && s?.height ? `${s.width}x${s.height}` : undefined;
+      const processedStream = cam.type === 'usb-audio' ? stream : applyGenesisRef.current(cameraId, stream);
       
       setCameras(prev => prev.map(c =>
         c.id === cameraId ? { ...c, stream: processedStream, connected: true, status: 'live', resolution } : c

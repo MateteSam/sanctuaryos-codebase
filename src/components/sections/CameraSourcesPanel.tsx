@@ -25,14 +25,26 @@ function QrCodeImage({ url, size = 180 }: { url: string; size?: number }) {
 }
 
 // ── Small live-video thumbnail ─────────────────────────────────────────────────
-function VideoThumb({ stream, label }: { stream?: MediaStream; label: string }) {
+function VideoThumb({ stream, label, type }: { stream?: MediaStream; label: string; type: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
-    if (ref.current && stream) {
+    if (ref.current && stream && type !== 'usb-audio') {
       ref.current.srcObject = stream;
       ref.current.play().catch(() => {});
     }
-  }, [stream]);
+  }, [stream, type]);
+
+  if (type === 'usb-audio') {
+    return (
+      <div className="w-16 h-10 rounded-lg bg-slate-900 border border-purple-500/40 flex items-center justify-center overflow-hidden">
+        <div className="flex items-center gap-0.5">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className={`w-1 bg-purple-400 rounded-full ${stream ? 'animate-pulse' : 'opacity-30'}`} style={{ height: stream ? 12 + Math.random() * 12 : 4, animationDelay: `${i * 100}ms` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (!stream) {
     return (
@@ -55,6 +67,7 @@ function TypeBadge({ type }: { type: string }) {
   const map: Record<string, { icon: React.ReactNode; label: string; cls: string }> = {
     local:       { icon: <Monitor className="w-2.5 h-2.5" />, label: 'LOCAL',   cls: 'text-sky-400 bg-sky-400/10 border-sky-400/30' },
     usb:         { icon: <Usb className="w-2.5 h-2.5" />,    label: 'USB',     cls: 'text-indigo-400 bg-indigo-400/10 border-indigo-400/30' },
+    'usb-audio': { icon: <Usb className="w-2.5 h-2.5" />,    label: 'USB AUDIO',cls: 'text-purple-400 bg-purple-400/10 border-purple-400/30' },
     rtc:         { icon: <Wifi className="w-2.5 h-2.5" />,   label: 'WIFI',    cls: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' },
     placeholder: { icon: <Signal className="w-2.5 h-2.5" />, label: 'EMPTY',   cls: 'text-slate-600 bg-slate-800 border-slate-700' },
   };
@@ -197,7 +210,7 @@ export function CameraSourcesPanel({
               layout
               className="flex items-center gap-3 p-3 rounded-2xl border border-white/[0.05] bg-white/[0.02] hover:border-white/10 hover:bg-white/[0.04] transition-all group"
             >
-              <VideoThumb stream={cam.stream} label={cam.label} />
+              <VideoThumb stream={cam.stream} label={cam.label} type={cam.type} />
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">

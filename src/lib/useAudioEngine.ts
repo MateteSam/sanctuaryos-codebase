@@ -215,19 +215,42 @@ export function useAudioEngine(cameras: ManagedCamera[]) {
 
     const allSources = [
       ...cameras.filter(c => c.connected && c.stream && c.stream.getAudioTracks().length > 0)
-         .map(c => ({ id: c.id, label: c.label, stream: c.stream as MediaStream | HTMLAudioElement, isVirtual: false })),
-      ...virtualSources.map(v => ({ id: v.id, label: v.label, stream: v.el as MediaStream | HTMLAudioElement, isVirtual: true }))
+         .map(c => ({ id: c.id, label: c.label, stream: c.stream as MediaStream | HTMLAudioElement, isVirtual: false, type: c.type })),
+      ...virtualSources.map(v => ({ id: v.id, label: v.label, stream: v.el as MediaStream | HTMLAudioElement, isVirtual: true, type: 'virtual' }))
     ];
 
+    const expandedSources: { id: string, label: string, source: AudioNode }[] = [];
+
     allSources.forEach(src => {
+      const rootSource = src.isVirtual 
+        ? ctx.createMediaElementSource(src.stream as HTMLAudioElement)
+        : ctx.createMediaStreamSource(src.stream as MediaStream);
+
+      const track = (src.stream as MediaStream).getAudioTracks?.()?.[0];
+      const channelCount = track?.getSettings?.()?.channelCount || 1;
+
+      // Automatically split Multitrack USB interfaces (Qu-Drive / ASIO)
+      if (src.type === 'usb-audio' && channelCount > 2) {
+        const splitter = ctx.createChannelSplitter(channelCount);
+        rootSource.connect(splitter);
+        // Expose each channel (limit to 32 to avoid overwhelming UI if reported incorrectly)
+        const maxCh = Math.min(32, channelCount);
+        for (let i = 0; i < maxCh; i++) {
+          const chGain = ctx.createGain();
+          splitter.connect(chGain, i, 0); // connect output `i` to chGain input `0`
+          expandedSources.push({ id: `${src.id}-ch${i+1}`, label: `CH ${i+1}`, source: chGain });
+        }
+      } else {
+        // Standard stereo/mono stream
+        expandedSources.push({ id: src.id, label: src.label, source: rootSource });
+      }
+    });
+
+    expandedSources.forEach(src => {
       activeIds.add(src.id);
       if (channelNodesRef.current.has(src.id)) return; // already wired
 
       try {
-        const source = src.isVirtual 
-          ? ctx.createMediaElementSource(src.stream as HTMLAudioElement)
-          : ctx.createMediaStreamSource(src.stream as MediaStream);
-
         const preAmp     = ctx.createGain();          preAmp.gain.value     = 1.0;
         const hpf        = ctx.createBiquadFilter(); hpf.type              = 'highpass'; hpf.frequency.value   = 80;
         const lowShelf   = ctx.createBiquadFilter(); lowShelf.type         = 'lowshelf'; lowShelf.frequency.value = 200;  lowShelf.gain.value  = 0;
@@ -243,7 +266,7 @@ export function useAudioEngine(cameras: ManagedCamera[]) {
         const analyser = ctx.createAnalyser(); analyser.fftSize   = 2048;
 
         // Chain: source → preAmp → hpf → lowShelf → lowMidPeak → highMidPeak → highShelf → gateGain → compressor → analyser → fader
-        source.connect(preAmp); preAmp.connect(hpf); hpf.connect(lowShelf);
+        src.source.connect(preAmp); preAmp.connect(hpf); hpf.connect(lowShelf);
         lowShelf.connect(lowMidPeak); lowMidPeak.connect(highMidPeak);
         highMidPeak.connect(highShelf); highShelf.connect(gateGain);
         gateGain.connect(compressor); compressor.connect(analyser); analyser.connect(fader);
@@ -260,7 +283,7 @@ export function useAudioEngine(cameras: ManagedCamera[]) {
         });
 
         channelNodesRef.current.set(src.id, {
-          source, preAmp, hpf, lowShelf, lowMidPeak, highMidPeak, highShelf, gateGain, compressor, fader, analyser, sendGains,
+          source: src.source as MediaStreamAudioSourceNode, preAmp, hpf, lowShelf, lowMidPeak, highMidPeak, highShelf, gateGain, compressor, fader, analyser, sendGains,
         });
       } catch (err) {
         console.warn('[AudioEngine] Failed to wire channel', src.id, err);
@@ -282,7 +305,7 @@ export function useAudioEngine(cameras: ManagedCamera[]) {
     }
 
     setChannels(prev => {
-      const next = allSources.map(src => {
+      const next = expandedSources.map(src => {
           const existing = prev.find(c => c.id === src.id);
           if (existing) return { ...existing, label: src.label };
           return {
